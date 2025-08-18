@@ -1,0 +1,1 @@
+/Users/jorgequezada/tools/bash_config/claude/mouse-jiggler/CLAUDE.md

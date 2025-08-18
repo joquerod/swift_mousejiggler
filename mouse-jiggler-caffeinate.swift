@@ -1,8 +1,8 @@
 #!/usr/bin/env swift
 
 //
-//  mouse-jiggler.swift
-//  A simple macOS utility to prevent system sleep by periodically moving the mouse cursor
+//  mouse-jiggler-caffeinate.swift
+//  Alternative implementation using caffeinate command
 //
 //  Created by Jorge Quezada
 //  License: MIT
@@ -10,7 +10,6 @@
 
 import Cocoa
 import Foundation
-import IOKit.pwr_mgt
 
 // Ensure unbuffered output for real-time feedback
 setbuf(stdout, nil)
@@ -19,33 +18,30 @@ setbuf(stdout, nil)
 let JIGGLE_INTERVAL: TimeInterval = 30.0  // Seconds between jiggles
 let JIGGLE_DISTANCE: CGFloat = 1.0        // Pixels to move (1 pixel is imperceptible)
 
-// Create power assertion to prevent sleep
-var assertionID: IOPMAssertionID = 0
-var success = IOPMAssertionCreateWithName(
-    kIOPMAssertionTypeNoDisplaySleep as CFString,
-    IOPMAssertionLevel(kIOPMAssertionLevelOn),
-    "Mouse Jiggler - Preventing Display Sleep" as CFString,
-    &assertionID
-)
+// Start caffeinate process to prevent sleep
+let caffeinateProcess = Process()
+caffeinateProcess.executableURL = URL(fileURLWithPath: "/usr/bin/caffeinate")
+caffeinateProcess.arguments = ["-disu"]  // Prevent display, idle, and system sleep
 
-if success != kIOReturnSuccess {
-    print("Warning: Could not create power assertion. System may still sleep.")
+do {
+    try caffeinateProcess.run()
+    print("Caffeinate process started (PID: \(caffeinateProcess.processIdentifier))")
+} catch {
+    print("Warning: Could not start caffeinate process: \(error)")
 }
 
 // Display welcome message
-print("Mouse Jiggler v1.0.0")
-print("====================")
+print("Mouse Jiggler v1.0.0 (Caffeinate Edition)")
+print("==========================================")
 print("Preventing system sleep by:")
 print("  • Moving mouse every \(Int(JIGGLE_INTERVAL)) seconds")
-print("  • Asserting display wake lock")
+print("  • Running caffeinate process")
 print("Press Ctrl+C to stop\n")
 
 // Handle graceful shutdown on Ctrl+C
 signal(SIGINT) { _ in
-    print("\n\nReleasing power assertion...")
-    if assertionID != 0 {
-        IOPMAssertionRelease(assertionID)
-    }
+    print("\n\nTerminating caffeinate process...")
+    caffeinateProcess.terminate()
     print("Mouse Jiggler stopped")
     fflush(stdout)
     exit(0)
