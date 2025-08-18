@@ -1,13 +1,16 @@
 # Mouse Jiggler for macOS
 
-A lightweight Swift command-line utility that prevents your Mac from going to sleep by periodically moving the mouse cursor imperceptibly.
+A lightweight Swift command-line utility that prevents your Mac from going to sleep using proper system APIs (IOKit power assertions or caffeinate) combined with periodic mouse cursor movements for visual feedback.
+
+> **Note:** Mouse movement alone does NOT prevent sleep on modern macOS. This tool uses proper power management APIs to actually keep your Mac awake.
 
 ## Features
 
-- 🖱️ Moves mouse cursor by 1 pixel every 30 seconds (imperceptible to the user)
-- 🚀 Lightweight and efficient - written in Swift with minimal resource usage
+- 💤 **Actually prevents sleep** using IOKit power assertions or caffeinate
+- 🖱️ Moves mouse cursor by 1 pixel every 30 seconds (visual feedback)
+- 🚀 Two implementations: IOKit (cleaner) and caffeinate (more reliable)
 - 📊 Real-time activity logging with timestamps and runtime statistics
-- 🛑 Graceful shutdown with Ctrl+C
+- 🛑 Graceful shutdown with Ctrl+C (properly releases power assertions)
 - 🎯 No dependencies or installation required
 - 🔧 Configurable jiggle interval and distance (modify constants in source)
 
@@ -22,41 +25,57 @@ A lightweight Swift command-line utility that prevents your Mac from going to sl
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/mouse-jiggler-macos.git
-cd mouse-jiggler-macos
+git clone https://github.com/joquerod/swift_mousejiggler.git
+cd swift_mousejiggler
 ```
 
-2. Make the script executable:
+2. Make the scripts executable:
 ```bash
 chmod +x mouse-jiggler.swift
+chmod +x mouse-jiggler-caffeinate.swift
 ```
 
-3. Run the jiggler:
+3. Run the jiggler (choose one):
 ```bash
+# Main version (using IOKit power assertions)
 ./mouse-jiggler.swift
+
+# Alternative version (using caffeinate)
+./mouse-jiggler-caffeinate.swift
 ```
 
 ### Alternative: Direct Download
 
 Download the `mouse-jiggler.swift` file directly and run:
 ```bash
-curl -O https://raw.githubusercontent.com/YOUR_USERNAME/mouse-jiggler-macos/main/mouse-jiggler.swift
+curl -O https://raw.githubusercontent.com/joquerod/swift_mousejiggler/main/mouse-jiggler.swift
 chmod +x mouse-jiggler.swift
 ./mouse-jiggler.swift
 ```
 
 ## Usage
 
-Simply run the script from Terminal:
+Choose between two versions:
+
+### Option 1: IOKit Version (Recommended)
 ```bash
 ./mouse-jiggler.swift
 ```
+Uses IOKit power assertions for clean, integrated sleep prevention.
+
+### Option 2: Caffeinate Version
+```bash
+./mouse-jiggler-caffeinate.swift
+```
+Uses macOS's built-in caffeinate command (more reliable on some systems).
 
 You'll see output like:
 ```
 Mouse Jiggler v1.0.0
 ====================
-Preventing system sleep by moving mouse every 30 seconds
+Preventing system sleep by:
+  • Moving mouse every 30 seconds
+  • Asserting display wake lock
 Press Ctrl+C to stop
 
 Starting... (performing initial jiggle)
@@ -70,12 +89,19 @@ To stop the jiggler, press `Ctrl+C`.
 
 ## How It Works
 
-The script uses macOS's Core Graphics framework to:
+The script prevents sleep using two methods:
+
+### 1. Power Management (Primary)
+- **IOKit Version**: Creates a `kIOPMAssertionTypeNoDisplaySleep` assertion
+- **Caffeinate Version**: Runs caffeinate subprocess with `-disu` flags
+
+### 2. Mouse Movement (Visual Feedback)
+Uses Core Graphics to periodically move the mouse:
 1. Get the current mouse position
 2. Move the cursor 1 pixel to the right
 3. Immediately move it back to the original position
 
-This movement is so small and quick that it's imperceptible to the user but sufficient to prevent the system from detecting inactivity.
+> **Important:** The mouse movement alone does NOT prevent sleep on modern macOS - it's just visual confirmation the script is running. The actual sleep prevention comes from the power assertions.
 
 ## Customization
 
@@ -103,6 +129,22 @@ let JIGGLE_DISTANCE: CGFloat = 1.0        // Pixels to move
 
 ## Troubleshooting
 
+### Mac Still Sleeping?
+
+1. **Verify power assertions are active**:
+   ```bash
+   # In another terminal, run:
+   pmset -g assertions | grep "Mouse Jiggler"
+   ```
+   You should see the assertion listed.
+
+2. **Try the caffeinate version** if IOKit version isn't working:
+   ```bash
+   ./mouse-jiggler-caffeinate.swift
+   ```
+
+3. **Check Activity Monitor** to ensure the process is running.
+
 ### Permission Issues
 
 If you encounter permission errors, ensure the Terminal app has accessibility permissions:
@@ -115,7 +157,13 @@ If you encounter permission errors, ensure the Terminal app has accessibility pe
 Make sure the script is executable:
 ```bash
 chmod +x mouse-jiggler.swift
+chmod +x mouse-jiggler-caffeinate.swift
 ```
+
+### Choosing Between Versions
+
+- **IOKit version**: Cleaner, no extra processes, but may require additional permissions
+- **Caffeinate version**: More reliable, uses Apple's official tool, shows as separate process
 
 ## Contributing
 
